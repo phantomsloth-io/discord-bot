@@ -39,8 +39,8 @@ jobs:
             type=semver,pattern={{major}},value=${{ env.IMAGE_TAG }}
             type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', 'main') }}
           labels: |
-            org.opencontainers.image.revision=${{ github.sha }}
-            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=$(git rev-parse HEAD)
+            org.opencontainers.image.source=github.com/phantomsloth-io/discord-bot
 
       - name: Build and push Docker image (versioned)
         uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
