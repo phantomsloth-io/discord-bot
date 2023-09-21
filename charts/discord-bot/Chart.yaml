@@ -1,5 +1,0 @@
-apiVersion: v2
-name: discord-bot
-description: The Phantomsloth.io Discord-bot
-type: application
-version: 0.1.0
