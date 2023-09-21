@@ -2,12 +2,13 @@ import json
 from math import floor, log10
 from urllib import request
 from datetime import date, timedelta
-import http.client, xmltodict, os, time, re, urllib.parse
+import http.client, xmltodict, os, time, re, urllib.parse, logging
 
 def encode_string(string):
     return urllib.parse.quote(string)
 
 def nasa_neo(nasa_key):
+    logging.info("calling NASA API for Near Earth Objects")
     today = date.today()
     yesterday = today - timedelta(days = 1)
     superscript = str.maketrans("0123456789", "⁰¹²³⁴⁵⁶⁷⁸⁹")
@@ -26,24 +27,43 @@ def nasa_neo(nasa_key):
     return data
 
 def nasa_apod(nasa_key):
+    logging.info("calling NASA API for Astronomy Picture of the Day")
     webUrl = request.urlopen("https://api.nasa.gov/planetary/apod?&api_key=" + str(nasa_key))
     theJSON = json.loads(webUrl.read())
     return theJSON
 
 def plex_search(search_query, library, plex_token):
+    logging.info(f"Calling Plex server for media info from query: {search_query} in library: {library}")
     api_url = http.client.HTTPSConnection("plex.phantomsloth.io")
     api_url.request("GET", f"/hubs/search/?X-Plex-Token={plex_token}&query={encode_string(search_query)}")
     lib_data = api_url.getresponse().read()
     lib_data_dict = xmltodict.parse(lib_data)
-    try:
-        lib_item_1 = lib_data_dict['MediaContainer']['Hub'][library]['Video'][0]
-    except:
-        lib_item_1 = lib_data_dict['MediaContainer']['Hub'][library]['Video']
+    if library == 'tv':
+        for i in lib_data_dict['MediaContainer']['Hub']:
+            if i['@title'] == "Shows":
+                library_index = i["Directory"]
+                try:
+                    lib_item_1 = library_index[0]
+                except:
+                    lib_item_1 = library_index
+
+    elif library == "movies": 
+        for i in lib_data_dict['MediaContainer']['Hub']:
+            if i['@title'] == "Movies":
+                library_index = i
+                try:
+                    lib_item_1 = library_index['Video'][0]
+                except:
+                    lib_item_1 = library_index['Video']
     poster = f"https://plex.phantomsloth.io{lib_item_1['@thumb']}?X-Plex-Token={plex_token}"
     title = f"{lib_item_1['@title']}"
-    rating = f"{lib_item_1['@rating']}"
+    year = f"{lib_item_1['@year']}"
+    if library == 'tv':
+        rating = f"{lib_item_1['@audienceRating']}"
+    elif library == "movies": 
+        rating = f"{lib_item_1['@rating']}"
     tagline = f"{lib_item_1['@tagline']}"
     summary = f"{lib_item_1['@summary']}"
     content_rating = f"{lib_item_1['@contentRating']}"
 
-    return title, poster, tagline, rating, summary, content_rating
+    return title, year, poster, tagline, rating, summary, content_rating

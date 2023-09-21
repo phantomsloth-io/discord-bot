@@ -10,7 +10,7 @@ def getConfig():
     print(os.getcwd())
     try:
         logging.info("Reading environment variables from config file.")
-        config.read('code/discord-bot/test.ini')
+        config.read('test.ini')
         discordToken = config['discord']['token']
         discordGuild = config['discord']['guild-id']
         nasaKey = config['nasa']['api-key']
