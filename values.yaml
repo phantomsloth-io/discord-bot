@@ -1,0 +1,24 @@
+deployment:
+  labels: []
+  annotations: {}
+containers:
+  labels: []
+  annotations: {}
+  secrets:
+  - secretRef: 
+      name: discord-secret
+  - secretRef: 
+      name: nasa-secret
+
+replicas: 1
+
+image: ghcr.io/phantomsloth-io/discord-bot:main
+
+imagePullPolicy: Always
+
+imagePullSecrets:
+  secret: dockerconfigjson-github-com
+
+datadog:
+  labels:
+    env: Prod
