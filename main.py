@@ -2,7 +2,7 @@ import discord, os, time, random, requests
 import extra_functions, main_tests
 
 
-main_tests.setEnvars()
+# main_tests.setEnvars()
 
 bot = discord.Bot()
 
