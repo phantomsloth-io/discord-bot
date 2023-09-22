@@ -1,25 +1,32 @@
-import discord, os, time, random, requests, logging, slugify
+from ddtrace import patch; patch(logging=True)
+import logging
 from ddtrace import tracer
-import extra_functions, main_tests
 
+FORMAT = ('%(asctime)s %(levelname)s [%(name)s] [%(filename)s:%(lineno)d] '
+          '[dd.service=%(dd.service)s dd.env=%(dd.env)s dd.version=%(dd.version)s dd.trace_id=%(dd.trace_id)s dd.span_id=%(dd.span_id)s] '
+          '- %(message)s')
+logging.basicConfig(format=FORMAT)
+log = logging.getLogger(__name__)
+log.level = logging.INFO
 
-# main_tests.setEnvars()
+import discord, os, time, random, requests, slugify
+import extra_functions, run_local
+
+# run_local.setEnvars()
 
 bot = discord.Bot()
-
-
 
 @bot.event
 async def on_ready():
     print(f"{bot.user} is ready and online!")
 
-@bot.slash_command(name="nasa")
 
+## Nasa Slash Command
+@bot.slash_command(name="nasa")
 @tracer.wrap(service="discord-bot", resource="nasa-slash-command")
 async def nasa_command(
   ctx: discord.ApplicationContext,
   nasa_function: discord.Option(str, choices=["Near Earth Objects", "Astronomy Picture of the Day"]),
-  # nasa_results: discord.Option(str, autocomplete=discord.utils.basic_autocomplete(get_nasa_function))
 ):
   span = tracer.current_span()
   logging.info("Received NASA slash command")
@@ -36,6 +43,8 @@ async def nasa_command(
   else: 
     pass
 
+
+## Plex Slash Command
 @bot.slash_command(name="plex")
 @tracer.wrap(service="discord-bot", resource="plex-slash-command")
 async def plex_command(
@@ -80,22 +89,17 @@ async def plex_command(
   embed.set_footer(text="plex.phantomsloth.io") # footers can have icons too
   embed.set_author(name="Plex @ Phantomsloth.io", icon_url="https://phantomsloth.io/images/phantomsloth_logo.png")
   embed.set_thumbnail(url="https://static-00.iconduck.com/assets.00/plex-new-icon-512x512-k93c4jua.png")
-  url = poster
   imageName = f'{str(slugify.slugify(title))}.png'
   logging.info("Requesting and saving plex poster")
-  print(imageName)
-  response = requests.get(url)
-  with open(imageName, 'wb') as f:
-    f.write(response.content)
-  logging.info("Poster saved as tmp.png")
+
+  extra_functions.save_image(poster, imageName)
+
   file = discord.File(imageName, filename=imageName)
   embed.set_image(url=f"attachment://{imageName}")
   await ctx.respond(embed=embed, file=file)
   logging.info("Reply sent!")
-  logging.info("Scrubbing tmp files")
-  os.remove(imageName)
-  logging.info("Tmp files successfully scrubbed")
 
+  extra_functions.delete_saved_image(imageName)
 
 
 bot.run(os.environ["DISCORD_TOKEN"])
