@@ -6,7 +6,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository_owner }}/discord-bot
-  IMAGE_TAG: 1.1.1
+  IMAGE_TAG: 1.1.2
 
 jobs:
   build-and-push-image:
