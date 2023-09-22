@@ -1,4 +1,5 @@
 import discord, os, time, random, requests, logging, slugify
+from ddtrace import tracer
 import extra_functions, main_tests
 
 
@@ -16,7 +17,9 @@ async def nasa_command(
   nasa_function: discord.Option(str, choices=["Near Earth Objects", "Astronomy Picture of the Day"]),
   # nasa_results: discord.Option(str, autocomplete=discord.utils.basic_autocomplete(get_nasa_function))
 ):
+  current_span = tracer.current_span()
   logging.info("Received NASA slash command")
+  current_span.set_tag('function', nasa_function)
   if nasa_function == "Near Earth Objects":
     neo_data = extra_functions.nasa_neo(os.environ["NASA_KEY"])
     await ctx.defer()
@@ -35,13 +38,17 @@ async def plex_command(
   library: discord.Option(str, choices=["Movies", "TV Shows"]),
   search_query: discord.Option(str)
 ):
+  current_span = tracer.current_span()
   logging.info("Received Plex slash command")
+  current_span.set_tag('function', 'plex-slash-command')
   if library == "Movies":
     library_choice = "movies"
   elif library == "TV Shows":
     library_choice = "tv"
   else: 
     pass
+  current_span.set_tag('library', library_choice)
+
   title, year, poster, tagline, rating, summary, content_rating = extra_functions.plex_search(search_query, library_choice ,os.environ["PLEX_TOKEN"])
 
   if content_rating in ['R', 'NC-17', 'TV-MA']:
