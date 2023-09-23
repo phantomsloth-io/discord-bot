@@ -12,7 +12,7 @@ log.level = logging.INFO
 import discord, os, time, random, requests, slugify
 import extra_functions, run_local
 
-# run_local.setEnvars()
+run_local.setEnvars()
 
 bot = discord.Bot()
 
@@ -29,19 +29,22 @@ async def nasa_command(
   nasa_function: discord.Option(str, choices=["Near Earth Objects", "Astronomy Picture of the Day"]),
 ):
   span = tracer.current_span()
+  await ctx.defer()
   logging.info("Received NASA slash command")
   span.set_tag('function', nasa_function)
-  if nasa_function == "Near Earth Objects":
-    neo_data = extra_functions.nasa_neo(os.environ["NASA_KEY"])
-    await ctx.defer()
-    await ctx.respond(f"Here's a near Earth object recorded today: \n {neo_data[random.randint(0, len(neo_data))]}")
-    logging.info("Reply sent!")
-  elif nasa_function == "Astronomy Picture of the Day":
-    apod_data = extra_functions.nasa_apod(os.environ["NASA_KEY"])
-    await ctx.respond(f"Astronomy Picture of the Day:\n {apod_data['title']} - {apod_data['date']}\n{apod_data['explanation']}\n{apod_data['hdurl']}")
-    logging.info("Reply sent!")
-  else: 
-    pass
+  try:
+    if nasa_function == "Near Earth Objects":
+      neo_data = extra_functions.nasa_neo(os.environ["NASA_KEY"])
+      await ctx.respond(f"Here's a near Earth object recorded today: \n {neo_data[random.randint(0, len(neo_data))]}")
+      logging.info("Reply sent!")
+    elif nasa_function == "Astronomy Picture of the Day":
+      apod_data = extra_functions.nasa_apod(os.environ["NASA_KEY"])
+      await ctx.respond(f"Astronomy Picture of the Day:\n {apod_data['title']} - {apod_data['date']}\n{apod_data['explanation']}\n{apod_data['hdurl']}")
+      logging.info("Reply sent!")
+    else: 
+      pass
+  except:
+    await ctx.respond("We were unable to complete your request, please try again...")
 
 
 ## Plex Slash Command
@@ -53,53 +56,57 @@ async def plex_command(
   search_query: discord.Option(str)
 ):
   span = tracer.current_span()
-  logging.info("Received Plex slash command")
-  if library == "Movies":
-    library_choice = "movies"
-  elif library == "TV Shows":
-    library_choice = "tv"
-  else: 
-    pass
-  span.set_tag('library', library_choice)
-
-  title, year, poster, tagline, rating, summary, content_rating = extra_functions.plex_search(search_query, library_choice ,os.environ["PLEX_TOKEN"])
-
-  span.set_tag('title', title)
-
-  if content_rating in ['R', 'NC-17', 'TV-MA']:
-    bubbleColor = discord.Colour.orange()
-  elif content_rating in ['PG-13', 'TV-14']:
-    bubbleColor = discord.Colour.yellow()
-  elif content_rating in ['PG', 'TV-PG', 'G', 'TV-G']:
-    bubbleColor = discord.Colour.green()
-  else:
-    bubbleColor = discord.Colour.gold()
-    
   await ctx.defer()
-  embed = discord.Embed(
-        title = f'{title}' ,
-        description = f'{tagline}',
-        color=bubbleColor, # Pycord provides a class with default colors you can choose from
-    )
-  embed.add_field(name="Year:", value=year, inline=True)
-  embed.add_field(name="Rating:", value=rating, inline=True)
-  embed.add_field(name="Content Rating:", value=content_rating, inline=True)
-  embed.add_field(name="Summary:", value=summary)
+  
+  try:
+    logging.info("Received Plex slash command")
+    if library == "Movies":
+      library_choice = "movies"
+    elif library == "TV Shows":
+      library_choice = "tv"
+    else: 
+      pass
+    span.set_tag('library', library_choice)
 
-  embed.set_footer(text="plex.phantomsloth.io") # footers can have icons too
-  embed.set_author(name="Plex @ Phantomsloth.io", icon_url="https://phantomsloth.io/images/phantomsloth_logo.png")
-  embed.set_thumbnail(url="https://static-00.iconduck.com/assets.00/plex-new-icon-512x512-k93c4jua.png")
-  imageName = f'{str(slugify.slugify(title))}.png'
-  logging.info("Requesting and saving plex poster")
+    title, year, poster, tagline, rating, summary, content_rating = extra_functions.plex_search(search_query, library_choice ,os.environ["PLEX_TOKEN"])
 
-  extra_functions.save_image(poster, imageName)
+    span.set_tag('title', title)
 
-  file = discord.File(imageName, filename=imageName)
-  embed.set_image(url=f"attachment://{imageName}")
-  await ctx.respond(embed=embed, file=file)
-  logging.info("Reply sent!")
+    if content_rating in ['R', 'NC-17', 'TV-MA']:
+      bubbleColor = discord.Colour.orange()
+    elif content_rating in ['PG-13', 'TV-14']:
+      bubbleColor = discord.Colour.yellow()
+    elif content_rating in ['PG', 'TV-PG', 'G', 'TV-G']:
+      bubbleColor = discord.Colour.green()
+    else:
+      bubbleColor = discord.Colour.gold()
+      
+    embed = discord.Embed(
+          title = f'{title}' ,
+          description = f'{tagline}',
+          color=bubbleColor, # Pycord provides a class with default colors you can choose from
+      )
+    embed.add_field(name="Year:", value=year, inline=True)
+    embed.add_field(name="Rating:", value=rating, inline=True)
+    embed.add_field(name="Content Rating:", value=content_rating, inline=True)
+    embed.add_field(name="Summary:", value=summary)
 
-  extra_functions.delete_saved_image(imageName)
+    embed.set_footer(text="plex.phantomsloth.io") # footers can have icons too
+    embed.set_author(name="Plex @ Phantomsloth.io", icon_url="https://phantomsloth.io/images/phantomsloth_logo.png")
+    embed.set_thumbnail(url="https://static-00.iconduck.com/assets.00/plex-new-icon-512x512-k93c4jua.png")
+    imageName = f'{str(slugify.slugify(title))}.png'
+    logging.info("Requesting and saving plex poster")
+
+    extra_functions.save_image(poster, imageName)
+
+    file = discord.File(imageName, filename=imageName)
+    embed.set_image(url=f"attachment://{imageName}")
+    await ctx.respond(embed=embed, file=file)
+    logging.info("Reply sent!")
+
+    extra_functions.delete_saved_image(imageName)
+  except:
+    await ctx.respond("We were unable to complete your request, please try again...")
 
 
 bot.run(os.environ["DISCORD_TOKEN"])

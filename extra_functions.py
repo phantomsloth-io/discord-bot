@@ -52,7 +52,7 @@ def nasa_apod(nasa_key):
 @tracer.wrap(service="discord-bot", resource="plex-library-search")
 def plex_search(search_query, library, plex_token):
     span = tracer.current_span()
-    title, year, poster, tagline, rating, summary, content_rating = ''
+    # title, year, poster, tagline, rating, summary, content_rating = ''
     logging.info(f"Calling Plex server for media info from query: {search_query} in library: {library}")
     api_url = http.client.HTTPSConnection("plex.phantomsloth.io")
     api_url.request("GET", f"/hubs/search/?X-Plex-Token={plex_token}&query={encode_string(search_query)}")
@@ -84,11 +84,15 @@ def plex_search(search_query, library, plex_token):
         rating = f"{lib_item_1['@audienceRating']}"
     elif library == "movies": 
         rating = f"{lib_item_1['@rating']}"
+
     try:
         tagline = f"{lib_item_1['@tagline']}"
     except:
-        logging.warn("No tagline found")
+        tagline = " "
+        
     summary = f"{lib_item_1['@summary']}"
-    content_rating = f"{lib_item_1['@contentRating']}"
-
+    try:
+        content_rating = f"{lib_item_1['@contentRating']}"
+    except:
+        content_rating = "N/A"
     return title, year, poster, tagline, rating, summary, content_rating
