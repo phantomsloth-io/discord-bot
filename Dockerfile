@@ -1,6 +1,6 @@
 FROM python:3.10.13
 
-RUN apk update && apk upgrade
+RUN apt update && apt upgrade
 RUN pip3 install py-cord requests xmltodict python-slugify ddtrace
 
 WORKDIR /app
