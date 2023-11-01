@@ -12,7 +12,7 @@ log.level = logging.INFO
 import discord, os, time, random, requests, slugify
 import extra_functions, run_local
 
-run_local.setEnvars()
+# run_local.setEnvars()
 
 bot = discord.Bot()
 
