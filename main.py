@@ -10,9 +10,9 @@ log = logging.getLogger(__name__)
 log.level = logging.INFO
 
 import discord, os, time, random, requests, slugify
-import extra_functions, run_local
+import utilities, run_local, nasa, plex, dungeons
 
-# run_local.setEnvars()
+run_local.setEnvars()
 
 bot = discord.Bot()
 
@@ -20,8 +20,9 @@ bot = discord.Bot()
 async def on_ready():
     print(f"{bot.user} is ready and online!")
 
+nasa = discord.SlashCommandGroup("nasa", "Cool NASA Things")
 
-## Nasa Slash Command
+### Nasa Slash Command
 @bot.slash_command(name="nasa")
 @tracer.wrap(service="discord-bot", resource="nasa-slash-command")
 async def nasa_command(
@@ -34,11 +35,11 @@ async def nasa_command(
   span.set_tag('function', nasa_function)
   try:
     if nasa_function == "Near Earth Objects":
-      neo_data = extra_functions.nasa_neo(os.environ["NASA_KEY"])
+      neo_data = nasa.nasa_neo(os.environ["NASA_KEY"])
       await ctx.respond(f"Here's a near Earth object recorded today: \n {neo_data[random.randint(0, len(neo_data))]}")
       logging.info("Reply sent!")
     elif nasa_function == "Astronomy Picture of the Day":
-      apod_data = extra_functions.nasa_apod(os.environ["NASA_KEY"])
+      apod_data = nasa.nasa_apod(os.environ["NASA_KEY"])
       await ctx.respond(f"Astronomy Picture of the Day:\n {apod_data['title']} - {apod_data['date']}\n{apod_data['explanation']}\n{apod_data['hdurl']}")
       logging.info("Reply sent!")
     else: 
@@ -47,7 +48,7 @@ async def nasa_command(
     await ctx.respond("We were unable to complete your request, please try again...")
 
 
-## Plex Slash Command
+### Plex Slash Command
 @bot.slash_command(name="plex")
 @tracer.wrap(service="discord-bot", resource="plex-slash-command")
 async def plex_command(
@@ -68,7 +69,7 @@ async def plex_command(
       pass
     span.set_tag('library', library_choice)
 
-    title, year, poster, tagline, rating, summary, content_rating = extra_functions.plex_search(search_query, library_choice ,os.environ["PLEX_TOKEN"])
+    title, year, poster, tagline, rating, summary, content_rating = plex.plex_search(search_query, library_choice ,os.environ["PLEX_TOKEN"])
 
     span.set_tag('title', title)
 
@@ -97,16 +98,69 @@ async def plex_command(
     imageName = f'{str(slugify.slugify(title))}.png'
     logging.info("Requesting and saving plex poster")
 
-    extra_functions.save_image(poster, imageName)
+    utilities.save_image(poster, imageName)
 
     file = discord.File(imageName, filename=imageName)
     embed.set_image(url=f"attachment://{imageName}")
     await ctx.respond(embed=embed, file=file)
     logging.info("Reply sent!")
 
-    extra_functions.delete_saved_image(imageName)
+    utilities.delete_saved_image(imageName)
   except:
     await ctx.respond("We were unable to complete your request, please try again...")
 
+### DnD slack Commands
+dnd = discord.SlashCommandGroup("dnd", "Roll Initiate!")
+
+## dice roll
+@dnd.command(name="roll_dice") # Create a slash command
+async def roll_dice(
+  ctx: discord.ApplicationContext,
+  sides: discord.Option(str, "What kind of dice?", choices=["D4", "D6", "D8", "D10", "D12", "D20"]),
+  dice_count: discord.Option(int, "How many dice?"),
+  bonus: discord.Option(int, "Any Bonus to add?", min_value=0, max_value = 20, default=0)
+):
+  roll = dungeons.roll_dice(int(dice_count), sides, bonus)
+  await ctx.respond(roll)
+
+## saving throw
+@dnd.command(name="saving_throw") # Create a slash command
+async def saving_throw(
+  ctx: discord.ApplicationContext,
+  advantage: discord.Option(str, "Any Advantage or Disadvantage", choices=["Advantage", "Disadvantage", "None"]),
+  bonus: discord.Option(int, "Any Bonus to add?", min_value=0, max_value = 20, default=0)
+):
+  roll = dungeons.saving_throw(bonus, advantage)
+  await ctx.respond(roll)
+
+
+class MyView(discord.ui.View): # Create a class called MyView that subclasses discord.ui.View
+    @discord.ui.button(label="Click me!", style=discord.ButtonStyle.primary, emoji="😎") # Create a button with the label "😎 Click me!" with color Blurple
+    async def button_callback(self, button, interaction):
+        await interaction.response.send_message("You clicked the button!") # Send a message when the button is clicked
+
+@dnd.command(name="button") # Create a slash command
+async def button(ctx):
+    await ctx.respond("This is a button!", view=MyView()) # Send a message with our View class that contains the button
+
+bot.add_application_command(dnd)
+
+# testing = discord.SlashCommandGroup("testing", "testing things here")
+
+# @testing.command(description="Sends the bot's latency.") # this decorator makes a slash command
+# async def ping(ctx): # a slash command will be created with the name "ping"
+#     await ctx.respond(f"Pong! Latency is {bot.latency}")
+
+
+# class MyView(discord.ui.View): # Create a class called MyView that subclasses discord.ui.View
+#     @discord.ui.button(label="Click me!", style=discord.ButtonStyle.primary, emoji="😎") # Create a button with the label "😎 Click me!" with color Blurple
+#     async def button_callback(self, button, interaction):
+#         await interaction.response.send_message("You clicked the button!") # Send a message when the button is clicked
+
+# @testing.command(name="button") # Create a slash command
+# async def button(ctx):
+#     await ctx.respond("This is a button!", view=MyView()) # Send a message with our View class that contains the button
+
+# bot.add_application_command(testing)
 
 bot.run(os.environ["DISCORD_TOKEN"])
