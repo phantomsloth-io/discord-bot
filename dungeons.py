@@ -63,8 +63,8 @@ def saving_throw(bonus, advantage):
 
 @tracer.wrap(service="discord-bot", resource="DnD-lookup")
 def dnd_lookup(selection):
-    endpoint = f"/{selection}"
-    url = f"https://dnd5eapi.co/api{endpoint}"
+    endpoint = selection
+    url = f"https://dnd5eapi.co{endpoint}"
 
     payload={}
     headers = {

@@ -134,7 +134,7 @@ async def saving_throw(
   await ctx.respond(roll)
 
 ## dnd lookup
-top_level_choices = ["ability-scores", "alignments", "classes", "conditions", "damage-types", "equipment", "equipment-categories", "feats", "features", "languages", "magic-items", "magic-schools", "monsters", "proficiencies", "races", "rule-sections", "rules", "skills", "spells", "subclasses", "subraces", "traits", "weapon-properties"]
+top_level_choices = ["classes", "conditions", "damage-types", "equipment", "magic-items", "monsters", "races", "skills", "spells"]
 
 async def get_sub_category(ctx: discord.AutocompleteContext):
   category = ctx.options['category']
@@ -150,14 +150,48 @@ async def get_sub_category(ctx: discord.AutocompleteContext):
 async def dnd_lookup(
   ctx: discord.ApplicationContext,
   category: discord.Option(str, choices=top_level_choices),
-  sub_category: discord.Option(str, autocomplete=discord.utils.basic_autocomplete(get_sub_category))
+  search_query: discord.Option(str)
+  # sub_category: discord.Option(str, autocomplete=discord.utils.basic_autocomplete(get_sub_category))
 ):
   span = tracer.current_span()
   await ctx.defer()
-  endpoint = category + "/" + sub_category
-  values = dungeons.dnd_lookup(endpoint)
+  endpoint = category
+  values = dungeons.dnd_lookup("/api/" + endpoint)
 
-  await ctx.respond(values)
+  bubbleColor = discord.Colour.green()
+
+  for i in values["results"]:
+    if search_query in i["index"]:
+      selection = dungeons.dnd_lookup(i["url"])
+      embed = discord.Embed(
+        title = selection['name'] ,
+        description = selection['desc'][0],
+        color=bubbleColor, # Pycord provides a class with default colors you can choose from
+      )
+      embed.add_field(name="Range:", value=selection['range'], inline=True)
+      embed.add_field(name="Components:", value=selection['components'], inline=True)
+      embed.add_field(name="Duration", value=selection['duration'], inline=True)
+      embed.add_field(name="Requires Concentration", value=selection['concentration'], inline=True)
+      try:
+        embed.add_field(name="DC Saving Throw", value=selection['dc']['dc_type']['name'], inline=True)
+      except:
+        pass
+
+      # embed.add_field(name="Summary:", value="summary")
+
+      embed.set_footer(text="phantomsloth.io") # footers can have icons too
+      embed.set_author(name="Phantomsloth.io", icon_url="https://phantomsloth.io/images/phantomsloth_logo.png")
+
+
+      await ctx.respond(embed=embed)
+      logging.info("Reply sent!")
+
+    else:
+      pass
+  await ctx.respond("We were unable to complete your request, please try again...")
+
+
+
 
 class MyView(discord.ui.View): # Create a class called MyView that subclasses discord.ui.View
     @discord.ui.button(label="Click me!", style=discord.ButtonStyle.primary, emoji="😎") # Create a button with the label "😎 Click me!" with color Blurple
