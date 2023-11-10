@@ -133,6 +133,31 @@ async def saving_throw(
   roll = dungeons.saving_throw(bonus, advantage)
   await ctx.respond(roll)
 
+## dnd lookup
+top_level_choices = ["ability-scores", "alignments", "classes", "conditions", "damage-types", "equipment", "equipment-categories", "feats", "features", "languages", "magic-items", "magic-schools", "monsters", "proficiencies", "races", "rule-sections", "rules", "skills", "spells", "subclasses", "subraces", "traits", "weapon-properties"]
+
+async def get_sub_category(ctx: discord.AutocompleteContext):
+  category = ctx.options['category']
+  values = dungeons.dnd_lookup(category)
+  options = []
+  for i in values["results"]:
+    options.append(i['index'])
+  return options
+
+
+@dnd.command(name="lookup")
+@tracer.wrap(service="discord-bot", resource="dnd-lookup-slash-command")
+async def dnd_lookup(
+  ctx: discord.ApplicationContext,
+  category: discord.Option(str, choices=top_level_choices),
+  sub_category: discord.Option(str, autocomplete=discord.utils.basic_autocomplete(get_sub_category))
+):
+  span = tracer.current_span()
+  await ctx.defer()
+  endpoint = category + "/" + sub_category
+  values = dungeons.dnd_lookup(endpoint)
+
+  await ctx.respond(values)
 
 class MyView(discord.ui.View): # Create a class called MyView that subclasses discord.ui.View
     @discord.ui.button(label="Click me!", style=discord.ButtonStyle.primary, emoji="😎") # Create a button with the label "😎 Click me!" with color Blurple

@@ -60,18 +60,18 @@ def saving_throw(bonus, advantage):
             pass
         final_roll = f"Rolled saving throw with {advantage}... Result: {result}. Your {advantage} die was {str(picked_die) + (' Crit!' if picked_die == 20 else '') + (' Crit Fail!' if picked_die == 1 else '')}. Your roll was a {roll1} and a {roll2}, and your bonus was {bonus}"
         return final_roll
-   
 
 @tracer.wrap(service="discord-bot", resource="DnD-lookup")
-def dnd_lookup(topic, query):
-    conn = http.client.HTTPSConnection("https://www.dnd5eapi.co/api/")
-    payload = ''
-    headers = {}
-    conn.request("GET", f"{topic}/{query}", payload, headers)
-    res = conn.getresponse()
-    data = res.read()
-    print(data.decode("utf-8"))
+def dnd_lookup(selection):
+    endpoint = f"/{selection}"
+    url = f"https://dnd5eapi.co/api{endpoint}"
 
+    payload={}
+    headers = {
+    'Accept': 'application/json'
+    }
 
-    
-            
+    response = requests.request("GET", url, headers=headers, data=payload)
+
+    values = json.loads(response.text)
+    return values
